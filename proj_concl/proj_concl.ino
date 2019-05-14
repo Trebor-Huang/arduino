@@ -12,7 +12,7 @@ const int leftMotor1 = 4;
 const int leftMotor2 = 5;
 const int rightMotor1 = 6;
 const int rightMotor2 = 7;
-
+void motorRun(int);
 void setup()
 {
   // put your setup code here, to run once:
@@ -130,8 +130,49 @@ void loop()
 } // namespace sound
 namespace infrared
 {
-  
-} // namespace infrared
 
-void setup() {}
-void loop() {}
+} // namespace infrared
+namespace gradient
+{
+  float lv, mv, rv = 0;
+enum GRAD
+{
+  Grad_L = 2,
+  Grad_R = 3,
+  Grad_M = 4
+};
+void setup(){
+  pinMode(Grad_L, INPUT);
+  pinMode(Grad_M, INPUT);
+  pinMode(Grad_R, INPUT);
+}
+inline int grad(int side)
+{
+  return analogRead(side);
+}
+int detect(){
+  Serial.println(String(lv) + "\t" + String(mv) + "\t" + String(rv));
+    if(lv - grad(Grad_L) > 10){
+      // Left turns black
+      return 1; // Turn left
+    }
+    if(rv - grad(Grad_R) > 10){
+      // Right turns black
+      return 2; // Turn right
+    }
+    lv = (grad(Grad_L));
+    mv = (grad(Grad_M));
+    rv = (grad(Grad_R));
+  
+}
+} // namespace gradient
+
+void setup() {
+  motor::setup();
+  gradient::setup();
+  sound::setup();
+  echo::setup();
+}
+void loop() {
+  gradient::detect();
+}
