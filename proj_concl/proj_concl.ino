@@ -79,7 +79,6 @@ void setup()
   pinMode(Trig, OUTPUT);
   pinMode(Echo, INPUT);
   pinMode(5, OUTPUT);
-  Serial.begin(9600);
 }
 
 float echo()
@@ -112,7 +111,6 @@ const int SOUND = 6;
 void setup()
 {
   pinMode(SOUND, INPUT);
-  Serial.begin(9600);
 }
 int getSound(int m)
 {
@@ -128,10 +126,6 @@ void loop()
   Serial.println(String(getSound(100)) + "\t100");
 }
 } // namespace sound
-namespace infrared
-{
-
-} // namespace infrared
 namespace gradient
 {
   float lv, mv, rv = 0;
@@ -168,11 +162,15 @@ int detect(){
 } // namespace gradient
 
 void setup() {
+  Serial.begin(9600);
   motor::setup();
   gradient::setup();
   sound::setup();
   echo::setup();
 }
 void loop() {
+  while(sound::getSound(50) < 30){
+    Serial.println("Waiting for sound signal...");
+  }
   gradient::detect();
 }
