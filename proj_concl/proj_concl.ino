@@ -8,15 +8,13 @@ const int BACKWARD = 2;
 const int TURNLEFT = 3;
 const int TURNRIGHT = 4;
 //定义需要用到的引脚
-const int leftMotor1 = 4;
-const int leftMotor2 = 5;
-const int rightMotor1 = 6;
-const int rightMotor2 = 7;
-void motorRun(int);
+const int leftMotor1 = 8;
+const int leftMotor2 = 9;
+const int rightMotor1 = 10;
+const int rightMotor2 = 11;
+void motorSet(int);
 void setup()
 {
-  // put your setup code here, to run once:
-  //设置控制电机的引脚为输出状态
   pinMode(leftMotor1, OUTPUT);
   pinMode(leftMotor2, OUTPUT);
   pinMode(rightMotor1, OUTPUT);
@@ -26,46 +24,46 @@ void setup()
 void loop()
 {
   int cmd;
-  for (cmd = 0; cmd < 5; cmd++) //依次执行向前、向后、向左、想有、停止四个运动状态
+  for (cmd = 0; cmd < 5; cmd++)
   {
-    motorRun(cmd);
-    delay(2000); //每个命令执行2s
+    motorSet(cmd);
+    delay(2000);
   }
 }
-//运动控制函数
-void motorRun(int cmd)
+
+void motorSet(int cmd)
 {
   switch (cmd)
   {
-  case FORWARD:
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, HIGH);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, HIGH);
-    break;
-  case BACKWARD:
-    digitalWrite(leftMotor1, HIGH);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, HIGH);
-    digitalWrite(rightMotor2, LOW);
-    break;
-  case TURNLEFT:
-    digitalWrite(leftMotor1, HIGH);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, HIGH);
-    break;
-  case TURNRIGHT:
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, HIGH);
-    digitalWrite(rightMotor1, HIGH);
-    digitalWrite(rightMotor2, LOW);
-    break;
-  default:
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, LOW);
+    case FORWARD:
+      digitalWrite(leftMotor1, LOW);
+      digitalWrite(leftMotor2, HIGH);
+      digitalWrite(rightMotor1, LOW);
+      digitalWrite(rightMotor2, HIGH);
+      break;
+    case BACKWARD:
+      digitalWrite(leftMotor1, HIGH);
+      digitalWrite(leftMotor2, LOW);
+      digitalWrite(rightMotor1, HIGH);
+      digitalWrite(rightMotor2, LOW);
+      break;
+    case TURNLEFT:
+      digitalWrite(leftMotor1, HIGH);
+      digitalWrite(leftMotor2, LOW);
+      digitalWrite(rightMotor1, LOW);
+      digitalWrite(rightMotor2, HIGH);
+      break;
+    case TURNRIGHT:
+      digitalWrite(leftMotor1, LOW);
+      digitalWrite(leftMotor2, HIGH);
+      digitalWrite(rightMotor1, HIGH);
+      digitalWrite(rightMotor2, LOW);
+      break;
+    default:
+      digitalWrite(leftMotor1, LOW);
+      digitalWrite(leftMotor2, LOW);
+      digitalWrite(rightMotor1, LOW);
+      digitalWrite(rightMotor2, LOW);
   }
 }
 } // namespace motor
@@ -79,6 +77,7 @@ void setup()
   pinMode(Trig, OUTPUT);
   pinMode(Echo, INPUT);
   pinMode(5, OUTPUT);
+  
 }
 
 float echo()
@@ -111,6 +110,7 @@ const int SOUND = 6;
 void setup()
 {
   pinMode(SOUND, INPUT);
+  
 }
 int getSound(int m)
 {
@@ -119,6 +119,7 @@ int getSound(int m)
   {
     r += 1 - digitalRead(SOUND);
   }
+  //Serial.println(r);
   return r;
 } // threshold: getSound(100)<75
 void loop()
@@ -128,49 +129,69 @@ void loop()
 } // namespace sound
 namespace gradient
 {
-  float lv, mv, rv = 0;
+float lv, mv, rv = 0;
 enum GRAD
 {
-  Grad_L = 2,
-  Grad_R = 3,
-  Grad_M = 4
+  GrL = 2,
+  GrR = 3,
+  GrM = 4
 };
-void setup(){
-  pinMode(Grad_L, INPUT);
-  pinMode(Grad_M, INPUT);
-  pinMode(Grad_R, INPUT);
+void setup() {
+  pinMode(GrL, INPUT);
+  pinMode(GrM, INPUT);
+  pinMode(GrR, INPUT);
 }
 inline int grad(int side)
 {
   return analogRead(side);
 }
-int detect(){
+int detect() {
   Serial.println(String(lv) + "\t" + String(mv) + "\t" + String(rv));
-    if(lv - grad(Grad_L) > 10){
-      // Left turns black
-      return 1; // Turn left
-    }
-    if(rv - grad(Grad_R) > 10){
-      // Right turns black
-      return 2; // Turn right
-    }
-    lv = (grad(Grad_L));
-    mv = (grad(Grad_M));
-    rv = (grad(Grad_R));
-  
+  if (lv - grad(GrL) > 10) {
+    // Left turns black
+    return 1; // Turn left
+  }
+  if (rv - grad(GrR) > 10) {
+    // Right turns black
+    return 2; // Turn right
+  }
+  lv = (grad(GrL));
+  mv = (grad(GrM));
+  rv = (grad(GrR));
+
 }
 } // namespace gradient
+namespace optic{
+  const int L = 2;
+  const int R = 12;
+  void setup(){
+    pinMode(L, INPUT);
+    pinMode(R, INPUT);
+  }
+  int detect(){
+    return ((1-digitalRead(L))<<1) | (1-digitalRead(R));
+  }
+  void loop(){
+    Serial.println(String(digitalRead(L)) + "\t" + String(digitalRead(R)));
+  }
+} //namespace optic
 
+bool detected_sound = false;
 void setup() {
   Serial.begin(9600);
   motor::setup();
   gradient::setup();
   sound::setup();
   echo::setup();
+  optic::setup();
+  detected_sound = false;
 }
+int opt;
 void loop() {
-  while(sound::getSound(50) < 30){
-    Serial.println("Waiting for sound signal...");
+  if(!detected_sound){
+    Serial.println("Waiting");
+    detected_sound = sound::getSound(100) > 50;
+    return;
   }
-  gradient::detect();
+  //motor::motorSet(motor::FORWARD);
 }
