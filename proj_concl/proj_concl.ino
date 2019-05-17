@@ -67,6 +67,7 @@ void motorSet(int cmd)
   }
 }
 } // namespace motor
+/*
 namespace echo
 {
 const int Echo = 3;
@@ -102,7 +103,7 @@ void loop()
     digitalWrite(5, HIGH);
   }
 }
-} // namespace echo
+} // namespace echo*/
 namespace sound
 {
 const int SOUND = 6;
@@ -129,7 +130,6 @@ void loop()
 } // namespace sound
 namespace gradient
 {
-float lv, mv, rv = 0;
 enum GRAD
 {
   GrL = 2,
@@ -141,24 +141,46 @@ void setup() {
   pinMode(GrM, INPUT);
   pinMode(GrR, INPUT);
 }
+int l[10],m[10],r[10];
+void init(){
+  // initializes gradient data
+  for(int i=0;i<10;i++){
+  l[i] = analogRead(GrL);
+  m[i] = analogRead(GrM);
+  r[i] = analogRead(GrR);
+  }
+}
 inline int grad(int side)
 {
   return analogRead(side);
 }
 int detect() {
-  Serial.println(String(lv) + "\t" + String(mv) + "\t" + String(rv));
-  if (lv - grad(GrL) > 10) {
-    // Left turns black
-    return 1; // Turn left
+  // -1 0 +1
+  // LL M RR
+  int M = grad(GrM);
+  int L = grad(GrL);
+  int R = grad(GrR);
+  Serial.println(String(l[0]) + "\t" + String(m[0]) + "\t" + String(r[0])+"\t"+String(L) + "\t" + String(M) + "\t" + String(R));
+  if(M-m[0]>10){
+    //check left
+    if(l[0]-L>10){
+      return -1;
+    }else if(r[0]-R>10){
+      return 1;
+    }else{
+      return 0;
+    }
+  }else{
+    for(int i=0;i<9;i++){
+      l[i] = l[i+1];
+      r[i] = r[i+1];
+      m[i] = m[i+1];
+    }
+    l[9] = L;
+    m[9] = M;
+    r[9] = R;
+    return 0;
   }
-  if (rv - grad(GrR) > 10) {
-    // Right turns black
-    return 2; // Turn right
-  }
-  lv = (grad(GrL));
-  mv = (grad(GrM));
-  rv = (grad(GrR));
-
 }
 } // namespace gradient
 namespace optic{
@@ -176,22 +198,58 @@ namespace optic{
   }
 } //namespace optic
 
+namespace fan{
+  const int FAN = 1;
+  void setup(){
+    pinMode(FAN, OUTPUT);
+  }
+  void set(bool istoon){
+    digitalWrite(FAN, int(istoon));
+  }
+} //namespace fan
+
 bool detected_sound = false;
 void setup() {
   Serial.begin(9600);
   motor::setup();
   gradient::setup();
   sound::setup();
-  echo::setup();
   optic::setup();
+  fan::setup();
   detected_sound = false;
 }
-int opt;
 void loop() {
   if(!detected_sound){
     Serial.println("Waiting");
     detected_sound = sound::getSound(100) > 50;
+    if(detected_sound){
+      
+  gradient::init();
+    }
     return;
   }
-  //motor::motorSet(motor::FORWARD);
+  switch(gradient::detect()){
+    case -1: //left
+    {
+      motor::motorSet(motor::TURNLEFT);
+      while(gradient::detect()!=0){
+        Serial.println("Waiting left");
+      }
+      break;
+    }
+    case 1: //right
+    {
+      motor::motorSet(motor::TURNRIGHT);
+      while(gradient::detect()!=0){
+        Serial.println("Waiting right");
+      }
+      break;
+    }
+    case 0:
+    {
+      motor::motorSet(motor::FORWARD);
+      //Serial.println("FOrward");
+      break;
+    }
+  }
 }
